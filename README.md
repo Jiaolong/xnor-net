@@ -24,6 +24,7 @@ python main.py --network='mnist_cnn'
 ```
 ### Accuracy ###
 * torch version
+
 | Model type | Testing accuracy |
 | ------------ | ----------- |
 | mnist_cnn | 98.81% |
@@ -31,6 +32,7 @@ python main.py --network='mnist_cnn'
 | mnist_xnor | 96.64% |
 
 * mxnet version
+
 | Model type | Testing accuracy |
 | ------------ | ----------- |
 | mnist_cnn | 98.73% |
