@@ -1,0 +1,7 @@
+build/
+bow/build/
+bow/experiment/
+data/
+torch/xnornet_cpu/cache/
+*.pyc
+*.so
