@@ -1,4 +1,4 @@
-# Implementation of XNOR-Net in mxnet and torch#
+# Implementation of XNOR-Net in mxnet and torch #
 
 Proof of concept [XNOR-Net](https://github.com/allenai/XNOR-Net.git) demo on MNIST dataset.
 
