@@ -27,8 +27,7 @@ class BinaryActivation(mx.operator.CustomOp):
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         y = out_grad[0].asnumpy()
-        y[y >= 1] = 0
-        y[y <= -1] = 0
+        y[abs(y) > 1] = 0
         self.assign(in_grad[0], req[0], mx.nd.array(y))
 
 @mx.operator.register("bin_act")
@@ -59,26 +58,27 @@ class BinaryConvolution(mx.operator.CustomOp):
         self.kernel = kernel
         self.stride = stride
         self.pad = pad
-        self.alpha = 1.0
+        self.wbin = None
+        self.alpha = None
 
     def binarize_weight(self, weight):
         """Binarize weight"""
-        # A = 1/n |W|
-        self.alpha = (np.sum(abs(weight)) * 1.0) / weight.size
-        # W = A * B
-        return np.sign(weight) * self.alpha
+        # alpha[i] = 1/n |W[i]|
+        self.wbin = weight
+        self.alpha = np.zeros((self.num_filter,), np.float32)
+        for i in xrange(self.num_filter):
+            self.alpha[i] = (np.sum(abs(weight[i])) * 1.0) / weight[i].size
+            self.wbin[i] = np.sign(weight[i]) * self.alpha[i]
 
-    def update_binary_grad(self, weight, dw):
+    def update_grad(self, wreal, dwbin):
         """
-        Update binary weight gradient
-        (real-value weight is used)
+        Update real weight gradient
         """
-        # real-value weight is used
-        # gradients of sign()
-        d_sign_w = weight
-        d_sign_w[weight >= 1] = 0
-        d_sign_w[weight <= -1] = 0
-        dw *= (1.0 / weight.size + self.alpha * d_sign_w)
+        dw = dwbin
+        for i in xrange(self.num_filter):
+            d_sign_w = wreal[i]
+            d_sign_w[abs(wreal[i]) > 1] = 0
+            dw[i] = dwbin[i] * (1.0 / wreal[i].size + self.alpha[i] * d_sign_w)
         return dw
 
     def forward(self, is_train, req, in_data, out_data, aux):
@@ -96,11 +96,11 @@ class BinaryConvolution(mx.operator.CustomOp):
         out = np.zeros((x_n, f_n, out_h, out_w), dtype=x.dtype)
 
         # binarize the weight
-        w = self.binarize_weight(w)
+        self.binarize_weight(w)
 
         # convert to colums
         x_cols = im2col_cython(x, f_w, f_h, pad[0], stride[0])
-        res = w.reshape((f_n, -1)).dot(x_cols)
+        res = self.wbin.reshape((f_n, -1)).dot(x_cols)
         out = res.reshape(f_n, out_h, out_w, x_n)
         out = out.transpose(3, 0, 1, 2)
         self.assign(out_data[0], req[0], mx.nd.array(out))
@@ -112,20 +112,17 @@ class BinaryConvolution(mx.operator.CustomOp):
         x_n, x_d, x_h, x_w = x.shape
         f_n, _, f_h, f_w = w_real.shape
 
-        # binarize weight again
-        w = self.binarize_weight(w_real)
-
         # convert to colums
         x_cols = im2col_cython(x, f_w, f_h, pad[0], stride[0])
         dout = out_grad[0].asnumpy()# (x_n, f_n, out_h, out_w)
         dout_ = dout.transpose(1, 2, 3, 0).reshape(f_n, -1)
-        dw = dout_.dot(x_cols.T).reshape(w.shape)
+        dwbin = dout_.dot(x_cols.T).reshape(self.wbin.shape)
         db = np.sum(dout, axis=(0, 2, 3)) # (f_n,)
-        dx_cols = w.reshape(f_n, -1).T.dot(dout_)
+        dx_cols = self.wbin.reshape(f_n, -1).T.dot(dout_)
         dx = col2im_cython(dx_cols, x_n, x_d, x_h, x_w, f_h, f_w, pad[0], stride[0])
 
         # update gradient
-        dw = self.update_binary_grad(w_real, dw)
+        dw = self.update_grad(w_real, dwbin)
         self.assign(in_grad[0], req[0], mx.nd.array(dx))
         self.assign(in_grad[1], req[0], mx.nd.array(dw))
 
@@ -154,6 +151,10 @@ class BinaryConvolutionProp(mx.operator.CustomOpProp):
         out_w = (x_w - f_w) / self.stride[1] + 1
         output_shape = [x_n, f_n, out_h, out_w]
         return [in_shape[0], w_shape], [output_shape], []
+
+    def infer_type(self, in_type):
+        dtype = in_type[0]
+        return [dtype, dtype], [dtype], []
 
     def create_operator(self, ctx, shapes, dtypes):
         return BinaryConvolution(self.num_filter, self.kernel, self.stride, self.pad)

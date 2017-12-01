@@ -28,7 +28,7 @@ python main.py --network='mnist_cnn'
 | Model type | Testing accuracy |
 | ------------ | ----------- |
 | mnist_cnn | 98.81% |
-| mnist_wbn | 98.38% |
+| mnist_bwn | 98.38% |
 | mnist_xnor | 96.64% |
 
 * mxnet version
@@ -36,5 +36,5 @@ python main.py --network='mnist_cnn'
 | Model type | Testing accuracy |
 | ------------ | ----------- |
 | mnist_cnn | 98.73% |
-| mnist_wbn | 97.47% |
+| mnist_wbn | 98.47% |
 | mnist_xnor | 85.40% |

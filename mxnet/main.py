@@ -9,14 +9,15 @@
 import os
 import argparse
 import mxnet as mx
+from mxnet import nd
 import logging
 
-from data_loader import load_mnist
+from data_loader import get_mnist_iter
 from models import mnist_cnn, mnist_bwn, mnist_xnor
 
 os.environ["MXNET_CPU_WORKER_NTHREADS"] = "8"
 
-def main(args):
+def main(args, ctx):
     # load model symbol
     if args.network == 'mnist_cnn':
         model = mnist_cnn()
@@ -29,15 +30,9 @@ def main(args):
 
     # load data
     batch_size = args.batch_size
-    (x_train, y_train), (x_val, y_val) = load_mnist(args.data_path)
-    train_iter = mx.io.NDArrayIter(x_train, y_train, batch_size, shuffle=True)
-    test_iter  = mx.io.NDArrayIter(x_val, y_val, batch_size)
-
-    # log
-    logging.basicConfig(level=logging.DEBUG)
-
+    train_iter, test_iter = get_mnist_iter(args.data_path, batch_size)
     # train
-    mod = mx.mod.Module(symbol=model, context=mx.cpu())
+    mod = mx.mod.Module(symbol=model, context=ctx)
     mod.fit(train_data=train_iter, eval_data=test_iter, num_epoch=args.num_epoch,
             optimizer_params={'learning_rate':args.learning_rate, 'momentum': args.momentum},
             batch_end_callback=mx.callback.Speedometer(batch_size, 200))
@@ -60,9 +55,19 @@ if __name__ == '__main__':
             help='momentum of SGD')
     parser.add_argument('--batch_size', type=int, default=100,
             help='mini-batch size')
-    parser.add_argument('--num_epoch', type=int, default=5,
+    parser.add_argument('--num_epoch', type=int, default=10,
             help='number of training epochs')
     args = parser.parse_args()
     print args
 
-    main(args)
+    try:
+        ctx = mx.gpu()
+        _ = nd.zeros((1,), ctx=ctx)
+    except:
+        ctx = mx.cpu()
+
+    mx.random.seed(1)
+    # log
+    logging.basicConfig(level=logging.DEBUG)
+
+    main(args, ctx=ctx)
