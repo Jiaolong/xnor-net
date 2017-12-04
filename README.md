@@ -35,6 +35,6 @@ python main.py --network='mnist_cnn'
 
 | Model type | Testing accuracy |
 | ------------ | ----------- |
-| mnist_cnn | 98.73% |
-| mnist_wbn | 98.47% |
-| mnist_xnor | 95.90% |
+| mnist_cnn | 99.02% |
+| mnist_bwn | 98.92% |
+| mnist_xnor | 98.26% |

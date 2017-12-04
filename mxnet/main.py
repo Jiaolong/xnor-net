@@ -34,7 +34,12 @@ def main(args, ctx):
     # train
     mod = mx.mod.Module(symbol=model, context=ctx)
     mod.fit(train_data=train_iter, eval_data=test_iter, num_epoch=args.num_epoch,
-            optimizer_params={'learning_rate':args.learning_rate, 'momentum': args.momentum},
+            optimizer = 'adam',
+            optimizer_params = {
+                'learning_rate': args.learning_rate,
+                'wd': 0.0,
+                'beta1': 0.5
+            },
             batch_end_callback=mx.callback.Speedometer(batch_size, 200))
 
     # evaluate accuracy
@@ -49,10 +54,8 @@ if __name__ == '__main__':
     parser.add_argument('--network', type=str,
             choices=['mnist_cnn', 'mnist_bwn', 'mnist_xnor'],
             default='mnist_cnn', help='network name')
-    parser.add_argument('--learning_rate', type=float, default=0.1,
+    parser.add_argument('--learning_rate', type=float, default=0.0002,
             help='learning rate')
-    parser.add_argument('--momentum', type=float, default=0.9,
-            help='momentum of SGD')
     parser.add_argument('--batch_size', type=int, default=100,
             help='mini-batch size')
     parser.add_argument('--num_epoch', type=int, default=5,
