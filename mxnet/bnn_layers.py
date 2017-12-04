@@ -28,6 +28,7 @@ class BinaryActivation(mx.operator.CustomOp):
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         y = out_grad[0].asnumpy()
         y[abs(y) > 1] = 0
+        y[abs(y) >= 1] = 1
         self.assign(in_grad[0], req[0], mx.nd.array(y))
 
 @mx.operator.register("bin_act")
@@ -76,7 +77,7 @@ class BinaryConvolution(mx.operator.CustomOp):
         """
         dw = dwbin
         for i in xrange(self.num_filter):
-            d_sign_w = wreal[i]
+            d_sign_w = np.ones_like(wreal[i])
             d_sign_w[abs(wreal[i]) > 1] = 0
             dw[i] = dwbin[i] * (1.0 / wreal[i].size + self.alpha[i] * d_sign_w)
         return dw

@@ -5,3 +5,4 @@ data/
 torch/xnornet_cpu/cache/
 *.pyc
 *.so
+*.c
