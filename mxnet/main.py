@@ -55,7 +55,7 @@ if __name__ == '__main__':
             help='momentum of SGD')
     parser.add_argument('--batch_size', type=int, default=100,
             help='mini-batch size')
-    parser.add_argument('--num_epoch', type=int, default=10,
+    parser.add_argument('--num_epoch', type=int, default=5,
             help='number of training epochs')
     args = parser.parse_args()
     print args
